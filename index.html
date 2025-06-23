@@ -867,3 +867,401 @@
                 // Fetch latest blocks
                 const response = await fetch(`${API_URL}/blocks`);
                 const blocks = await response.json();
+                
+                displayBlocks(blocks.slice(0, 10)); // Show latest 10 blocks
+                
+            } catch (error) {
+                console.error('Error fetching blocks:', error);
+                container.innerHTML = '<div class="error">Failed to load blocks. Please try again.</div>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayBlocks(blocks) {
+            const container = document.getElementById('blockContainer');
+            
+            const blocksHTML = blocks.map(block => `
+                <div class="info-card" style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="font-size: 1.5rem; color: #ff6b35; font-weight: bold;">
+                            Block #${block.height.toLocaleString()}
+                        </div>
+                        <div style="color: #00ff41;">
+                            ${new Date(block.timestamp * 1000).toLocaleString()}
+                        </div>
+                    </div>
+                    <div class="info-grid">
+                        <div>
+                            <div class="info-label">Block Hash</div>
+                            <div class="info-value hash">${block.id}</div>
+                        </div>
+                        <div>
+                            <div class="info-label">Transactions</div>
+                            <div class="info-value">${block.tx_count.toLocaleString()}</div>
+                        </div>
+                        <div>
+                            <div class="info-label">Size</div>
+                            <div class="info-value">${formatBytes(block.size)}</div>
+                        </div>
+                        <div>
+                            <div class="info-label">Weight</div>
+                            <div class="info-value">${formatNumber(block.weight)}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <a href="https://mempool.space/block/${block.id}" target="_blank" 
+                           style="color: #00ff41; text-decoration: underline;">
+                            View on Mempool.space →
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = blocksHTML;
+        }
+
+        // Hash Rate Analysis functions
+        async function loadHashrateAnalysis() {
+            try {
+                // Update detailed hashrate stats
+                document.getElementById('currentHashrateDetail').textContent = '450 EH/s';
+                document.getElementById('avgHashrate').textContent = '445 EH/s';
+                document.getElementById('hashrateTrend').textContent = '+2.5%';
+                
+                // Initialize hashrate history chart
+                initializeHashrateHistoryChart();
+                initializeDifficultyChart();
+                
+            } catch (error) {
+                console.error('Error loading hashrate analysis:', error);
+            }
+        }
+
+        function initializeHashrateHistoryChart() {
+            const ctx = document.getElementById('hashrateHistoryChart');
+            if (!ctx) return;
+            
+            // Generate 30 days of hashrate data
+            const labels = [];
+            const data = [];
+            const now = new Date();
+            
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                data.push(420 + Math.random() * 60 + i * 0.5); // Trending up slightly
+            }
+            
+            charts.hashrateHistoryChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Network Hashrate (EH/s)',
+                        data: data,
+                        borderColor: '#00ff41',
+                        backgroundColor: 'rgba(0, 255, 65, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#00ff41' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeDifficultyChart() {
+            const ctx = document.getElementById('difficultyChart');
+            if (!ctx) return;
+            
+            // Generate difficulty adjustment data
+            const labels = [];
+            const data = [];
+            const changes = [];
+            
+            for (let i = 11; i >= 0; i--) {
+                labels.push(`Epoch ${12 - i}`);
+                const difficulty = 60 + Math.random() * 5 + i * 0.2;
+                data.push(difficulty);
+                changes.push(i > 10 ? 0 : (data[data.length - 1] - data[data.length - 2]) / data[data.length - 2] * 100);
+            }
+            
+            charts.difficultyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Difficulty (T)',
+                        data: data,
+                        borderColor: '#ff6b35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#00ff41' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Mining Pools functions
+        async function loadPoolData() {
+            try {
+                // Initialize pool distribution chart
+                initializePoolChart();
+                
+                // Load pool table data
+                loadPoolTable();
+                
+            } catch (error) {
+                console.error('Error loading pool data:', error);
+            }
+        }
+
+        function initializePoolChart() {
+            const ctx = document.getElementById('poolChart');
+            if (!ctx) return;
+            
+            const poolData = [
+                { name: 'Foundry USA', hashrate: 28.5 },
+                { name: 'AntPool', hashrate: 18.2 },
+                { name: 'F2Pool', hashrate: 14.8 },
+                { name: 'ViaBTC', hashrate: 9.1 },
+                { name: 'Binance Pool', hashrate: 8.3 },
+                { name: 'Poolin', hashrate: 6.7 },
+                { name: 'Others', hashrate: 14.4 }
+            ];
+            
+            charts.poolChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: poolData.map(p => p.name),
+                    datasets: [{
+                        data: poolData.map(p => p.hashrate),
+                        backgroundColor: [
+                            '#ff6b35', '#00ff41', '#f7931e', '#00ccff', 
+                            '#ff4444', '#44ff44', '#ffff44'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#000'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { 
+                                color: '#00ff41',
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadPoolTable() {
+            const tableBody = document.getElementById('poolTableBody');
+            
+            const poolData = [
+                { name: 'Foundry USA', hashrate: '128.25 EH/s', blocks: 42, share: '28.5%', status: 'Active' },
+                { name: 'AntPool', hashrate: '81.90 EH/s', blocks: 27, share: '18.2%', status: 'Active' },
+                { name: 'F2Pool', hashrate: '66.60 EH/s', blocks: 22, share: '14.8%', status: 'Active' },
+                { name: 'ViaBTC', hashrate: '40.95 EH/s', blocks: 13, share: '9.1%', status: 'Active' },
+                { name: 'Binance Pool', hashrate: '37.35 EH/s', blocks: 12, share: '8.3%', status: 'Active' },
+                { name: 'Poolin', hashrate: '30.15 EH/s', blocks: 10, share: '6.7%', status: 'Active' }
+            ];
+            
+            const tableHTML = poolData.map(pool => `
+                <tr>
+                    <td style="font-weight: bold; color: #ff6b35;">${pool.name}</td>
+                    <td>${pool.hashrate}</td>
+                    <td>${pool.blocks}</td>
+                    <td>${pool.share}</td>
+                    <td><span style="color: #00ff41;">●</span> ${pool.status}</td>
+                </tr>
+            `).join('');
+            
+            tableBody.innerHTML = tableHTML;
+        }
+
+        // Mining Calculator functions
+        function calculateProfitability() {
+            const hashRate = parseFloat(document.getElementById('hashRate').value) || 0;
+            const powerConsumption = parseFloat(document.getElementById('powerConsumption').value) || 0;
+            const electricityCost = parseFloat(document.getElementById('electricityCost').value) || 0;
+            const poolFee = parseFloat(document.getElementById('poolFee').value) || 0;
+            
+            // Bitcoin mining calculations (simplified)
+            const networkHashrate = 450 * 1000 * 1000; // 450 EH/s in TH/s
+            const blockReward = 3.125; // Current block reward
+            const bitcoinPrice = 67500; // Current BTC price
+            const blocksPerDay = 144; // Average blocks per day
+            
+            // Calculate daily BTC earned
+            const userHashrateShare = hashRate / networkHashrate;
+            const dailyBTC = userHashrateShare * blockReward * blocksPerDay;
+            const dailyBTCAfterFees = dailyBTC * (1 - poolFee / 100);
+            
+            // Calculate revenues and costs
+            const dailyRevenue = dailyBTCAfterFees * bitcoinPrice;
+            const dailyElectricityCost = (powerConsumption / 1000) * 24 * electricityCost;
+            const dailyProfit = dailyRevenue - dailyElectricityCost;
+            const monthlyProfit = dailyProfit * 30;
+            
+            // Display results
+            document.getElementById('dailyRevenue').textContent = `${dailyRevenue.toFixed(2)}`;
+            document.getElementById('dailyElectricity').textContent = `${dailyElectricityCost.toFixed(2)}`;
+            document.getElementById('dailyProfit').textContent = `${dailyProfit.toFixed(2)}`;
+            document.getElementById('dailyProfit').style.color = dailyProfit > 0 ? '#00ff41' : '#ff4444';
+            document.getElementById('monthlyProfit').textContent = `${monthlyProfit.toFixed(2)}`;
+            document.getElementById('monthlyProfit').style.color = monthlyProfit > 0 ? '#00ff41' : '#ff4444';
+            
+            document.getElementById('calculatorResults').style.display = 'block';
+        }
+
+        // News functions
+        function loadNews() {
+            const newsContainer = document.getElementById('newsContainer');
+            
+            // Sample news data (in a real app, fetch from news API)
+            const newsData = [
+                {
+                    title: "Bitcoin Mining Difficulty Increases by 3.2%",
+                    content: "The Bitcoin network difficulty has adjusted upward by 3.2% following the latest adjustment period, reflecting continued growth in network hashrate as more miners come online.",
+                    timestamp: "2 hours ago",
+                    source: "Bitcoin News"
+                },
+                {
+                    title: "Major Mining Pool Announces Green Energy Initiative",
+                    content: "Foundry USA, one of the largest Bitcoin mining pools, announced a new initiative to source 75% of its energy from renewable sources by the end of 2025.",
+                    timestamp: "6 hours ago",
+                    source: "Crypto Mining Today"
+                },
+                {
+                    title: "New ASIC Miners Hit Market with 150 TH/s Performance",
+                    content: "Leading ASIC manufacturer announces their latest generation miners capable of 150 TH/s with improved energy efficiency of 19 J/TH.",
+                    timestamp: "1 day ago",
+                    source: "Mining Hardware Weekly"
+                },
+                {
+                    title: "Bitcoin Hashrate Reaches New All-Time High",
+                    content: "The Bitcoin network hashrate has reached a new record high of 475 EH/s, demonstrating the continued security and decentralization of the network.",
+                    timestamp: "2 days ago",
+                    source: "Blockchain Analytics"
+                },
+                {
+                    title: "Mining Profitability Improves Following Price Rally",
+                    content: "Bitcoin's recent price surge to $67,500 has significantly improved mining profitability across all efficiency tiers, with older generation ASICs becoming profitable again.",
+                    timestamp: "3 days ago",
+                    source: "Mining Economics"
+                }
+            ];
+            
+            const newsHTML = newsData.map(article => `
+                <div class="news-item">
+                    <div class="news-title">${article.title}</div>
+                    <div class="news-content">${article.content}</div>
+                    <div class="news-meta">
+                        <strong>${article.source}</strong> • ${article.timestamp}
+                    </div>
+                </div>
+            `).join('');
+            
+            newsContainer.innerHTML = newsHTML;
+        }
+
+        // Utility functions
+        function formatNumber(num) {
+            if (!num) return '0';
+            return num.toLocaleString();
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return '0 Bytes';
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            if (bytes === 0) return '0 Bytes';
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function copyBitcoinAddress() {
+            const address = 'bc1qwxksr72wzy8m5pl5seavw6wkdna7c6gqtfe0a8dl5f3pv04dt08sathwy0';
+            navigator.clipboard.writeText(address).then(() => {
+                const button = document.querySelector('.coffee-button');
+                const originalText = button.textContent;
+                button.textContent = '✅ Address Copied!';
+                button.style.background = 'linear-gradient(45deg, #00ff41, #00cc33)';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'linear-gradient(45deg, #ff6b35, #f7931e)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy address:', err);
+            });
+        }
+
+        // Auto-refresh functionality
+        function setupAutoRefresh() {
+            autoRefreshInterval = setInterval(() => {
+                if (currentPage === 'dashboard') {
+                    loadDashboard();
+                } else if (currentPage === 'blocks') {
+                    fetchLatestBlocks();
+                }
+            }, 30000); // Refresh every 30 seconds
+        }
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboard();
+            setupAutoRefresh();
+        });
+
+        // Cleanup intervals when page is closed
+        window.addEventListener('beforeunload', function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>
