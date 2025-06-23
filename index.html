@@ -1122,19 +1122,85 @@
             tableBody.innerHTML = tableHTML;
         }
 
-        // Mining Calculator functions
-        function calculateProfitability() {
-            const hashRate = parseFloat(document.getElementById('hashRate').value) || 0;
-            const powerConsumption = parseFloat(document.getElementById('powerConsumption').value) || 0;
-            const electricityCost = parseFloat(document.getElementById('electricityCost').value) || 0;
-            const poolFee = parseFloat(document.getElementById('poolFee').value) || 0;
+// Global variable to store network data
+let networkData = {
+    btcPrice: 67500, // Fallback price
+    networkHashrate: 450 * 1000 * 1000, // Fallback: 450 EH/s in TH/s
+    blockReward: 3.125,
+    blocksPerDay: 144
+};
+
+// Function to fetch real-time data from APIs
+async function fetchNetworkData() {
+    try {
+        // Fetch BTC price from CoinGecko API
+        const priceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+        const priceData = await priceResponse.json();
+        networkData.btcPrice = priceData.bitcoin.usd;
+
+        // Fetch network hashrate from Mempool API
+        const hashrateResponse = await fetch('https://mempool.space/api/v1/mining/hashrate/1w');
+        const hashrateData = await hashrateResponse.json();
+        // Convert from hash/s to TH/s (divide by 10^12)
+        networkData.networkHashrate = hashrateData.currentHashrate / 1000; // Already in TH/s from API
+
+        console.log('Network data updated:', networkData);
+    } catch (error) {
+        console.error('Error fetching network data:', error);
+        // Keep fallback values if API fails
+    }
+}
+
+            // Mining Calculator functions
+            async function calculateProfitability() {
+                const hashRate = parseFloat(document.getElementById('hashRate').value) || 0;
+                const powerConsumption = parseFloat(document.getElementById('powerConsumption').value) || 0;
+                const electricityCost = parseFloat(document.getElementById('electricityCost').value) || 0;
+                const poolFee = parseFloat(document.getElementById('poolFee').value) || 0;
+                
+                // Fetch latest network data before calculating
+                await fetchNetworkData();
+                
+                // Bitcoin mining calculations using real-time data
+                const networkHashrate = networkData.networkHashrate; // Real-time network hashrate in TH/s
+                const blockReward = networkData.blockReward; // Current block reward
+                const bitcoinPrice = networkData.btcPrice; // Real-time BTC price
+                const blocksPerDay = networkData.blocksPerDay; // Average blocks per day
+                
+                // Calculate daily BTC earned
+                const userHashrateShare = hashRate / networkHashrate;
+                const dailyBTC = userHashrateShare * blockReward * blocksPerDay;
+                const dailyBTCAfterFees = dailyBTC * (1 - poolFee / 100);
+                
+                // Calculate revenues and costs
+                const dailyRevenue = dailyBTCAfterFees * bitcoinPrice;
+                const dailyElectricityCost = (powerConsumption / 1000) * 24 * electricityCost;
+                const dailyProfit = dailyRevenue - dailyElectricityCost;
+                const monthlyProfit = dailyProfit * 30;
+                
+                // Display current network stats (optional)
+                console.log(`Current BTC Price: $${bitcoinPrice.toLocaleString()}`);
+                console.log(`Network Hashrate: ${(networkHashrate / 1000000).toFixed(0)} EH/s`);
+                console.log(`Daily BTC Earned: ${dailyBTCAfterFees.toFixed(8)} BTC`);
+                console.log(`Daily Profit: $${dailyProfit.toFixed(2)}`);
+                
+                // Return or display results as needed
+                return {
+                    dailyBTC: dailyBTCAfterFees,
+                    dailyRevenue,
+                    dailyElectricityCost,
+                    dailyProfit,
+                    monthlyProfit,
+                    currentPrice: bitcoinPrice,
+                    networkHashrate: networkHashrate
+                };
+            }
             
-            // Bitcoin mining calculations (simplified)
-            const networkHashrate = 450 * 1000 * 1000; // 450 EH/s in TH/s
-            const blockReward = 3.125; // Current block reward
-            const bitcoinPrice = 67500; // Current BTC price
-            const blocksPerDay = 144; // Average blocks per day
-            
+            // Initialize network data on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                fetchNetworkData();
+            });
+                        
             // Calculate daily BTC earned
             const userHashrateShare = hashRate / networkHashrate;
             const dailyBTC = userHashrateShare * blockReward * blocksPerDay;
