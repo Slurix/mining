@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitcoin Block Dashboard</title>
+    <title>Bitcoin Mining Dashboard Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -19,10 +20,77 @@
             overflow-x: hidden;
         }
 
+        .nav-bar {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid #ff6b35;
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff6b35;
+            text-shadow: 0 0 10px #ff6b35;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-item {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 107, 53, 0.2);
+            color: #ff6b35;
+            transform: translateY(-2px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .header {
@@ -44,28 +112,77 @@
             to { text-shadow: 0 0 30px #ff6b35, 0 0 40px #ff6b35; }
         }
 
-        .status {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: bold;
-            margin-top: 10px;
-            transition: all 0.3s ease;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
-        .status.connected {
-            background: rgba(0, 255, 65, 0.2);
-            border: 2px solid #00ff41;
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff6b35, #00ff41, #ff6b35);
+            border-radius: 20px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            opacity: 0.3;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 255, 65, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ff6b35;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-change {
+            font-size: 0.9rem;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+
+        .stat-change.positive {
             color: #00ff41;
         }
 
-        .status.disconnected {
-            background: rgba(255, 107, 53, 0.2);
-            border: 2px solid #ff6b35;
-            color: #ff6b35;
+        .stat-change.negative {
+            color: #ff4444;
         }
 
-        .block-container {
+        .chart-container {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 255, 65, 0.3);
@@ -73,35 +190,23 @@
             padding: 30px;
             margin-bottom: 30px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .block-container:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0, 255, 65, 0.2);
-        }
-
-        .block-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        .block-height {
-            font-size: 2.5rem;
+        .chart-title {
+            font-size: 1.5rem;
             color: #ff6b35;
+            margin-bottom: 20px;
+            text-align: center;
             font-weight: bold;
         }
 
-        .block-time {
-            font-size: 1.2rem;
-            color: #00ff41;
-            opacity: 0.8;
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
         }
 
-        .grid {
+        .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
@@ -145,6 +250,27 @@
             border: 1px solid rgba(0, 255, 65, 0.3);
         }
 
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .status.connected {
+            background: rgba(0, 255, 65, 0.2);
+            border: 2px solid #00ff41;
+            color: #00ff41;
+        }
+
+        .status.disconnected {
+            background: rgba(255, 107, 53, 0.2);
+            border: 2px solid #ff6b35;
+            color: #ff6b35;
+        }
+
         .refresh-btn {
             background: linear-gradient(45deg, #ff6b35, #f7931e);
             border: none;
@@ -156,6 +282,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+            margin: 10px;
         }
 
         .refresh-btn:hover {
@@ -163,17 +290,12 @@
             box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
         }
 
-        .refresh-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
         .loading {
             text-align: center;
             font-size: 1.2rem;
             color: #ff6b35;
             animation: pulse 1.5s ease-in-out infinite;
+            padding: 40px;
         }
 
         @keyframes pulse {
@@ -181,25 +303,75 @@
             50% { opacity: 0.5; }
         }
 
-        .error {
-            background: rgba(255, 107, 53, 0.1);
-            border: 1px solid #ff6b35;
-            color: #ff6b35;
-            padding: 20px;
+        .pool-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(0, 0, 0, 0.3);
             border-radius: 15px;
-            text-align: center;
+            overflow: hidden;
             margin: 20px 0;
         }
 
-        .auto-refresh {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 20px;
+        .pool-table th,
+        .pool-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
         }
 
-        .auto-refresh input {
-            transform: scale(1.2);
+        .pool-table th {
+            background: rgba(255, 107, 53, 0.2);
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        .pool-table tr:hover {
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        .calculator-form {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            border-radius: 8px;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+        }
+
+        .result-panel {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid #ff6b35;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
         }
 
         .coffee-button {
@@ -217,373 +389,481 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
             z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
         }
 
-        .coffee-button:hover {
-            transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 8px 30px rgba(255, 107, 53, 0.6);
-        }
-
-        .coffee-button:active {
-            transform: translateY(-1px) scale(1.02);
-        }
-
-        .coffee-tooltip {
-            position: absolute;
-            bottom: 70px;
-            right: -50px;
-            background: rgba(0, 0, 0, 0.95);
-            color: #00ff41;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #00ff41;
-            font-family: 'Courier New', monospace;
-            font-size: 0.8rem;
-            opacity: 0;
-            transform: translateY(10px);
+        .news-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
             transition: all 0.3s ease;
-            pointer-events: none;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
-            z-index: 1001;
-            width: 280px;
-            text-align: center;
         }
 
-        .coffee-button:hover .coffee-tooltip {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .bitcoin-address {
-            font-size: 0.75rem;
-            word-break: break-all;
-            line-height: 1.3;
-            margin-top: 8px;
-            color: #ff6b35;
-            font-weight: bold;
+        .news-item:hover {
+            border-color: #ff6b35;
             background: rgba(255, 107, 53, 0.1);
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid rgba(255, 107, 53, 0.3);
+        }
+
+        .news-title {
+            color: #ff6b35;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .news-content {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .news-meta {
+            font-size: 0.9rem;
+            opacity: 0.7;
         }
 
         @media (max-width: 768px) {
+            .nav-menu {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
             .header h1 {
                 font-size: 2rem;
             }
             
-            .block-header {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .block-height {
-                font-size: 2rem;
-                margin-bottom: 10px;
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Navigation -->
+    <nav class="nav-bar">
+        <div class="nav-container">
+            <div class="nav-logo">⛏️ BTC Mining Pro</div>
+            <ul class="nav-menu">
+                <li class="nav-item active" onclick="showPage('dashboard')">Dashboard</li>
+                <li class="nav-item" onclick="showPage('blocks')">Block Explorer</li>
+                <li class="nav-item" onclick="showPage('hashrate')">Hash Rate</li>
+                <li class="nav-item" onclick="showPage('pools')">Mining Pools</li>
+                <li class="nav-item" onclick="showPage('calculator')">Calculator</li>
+                <li class="nav-item" onclick="showPage('news')">News</li>
+            </ul>
+        </div>
+    </nav>
+
     <div class="container">
-        <div class="header">
-            <h1>⛏️ Bitcoin Block Dashboard</h1>
-            <div id="status" class="status disconnected">Connecting...</div>
-        </div>
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page active">
+            <div class="header">
+                <h1>⛏️ Bitcoin Mining Dashboard</h1>
+                <div id="status" class="status connected">🟢 Connected</div>
+            </div>
 
-        <div id="loading" class="loading">
-            Loading current block data...
-        </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="currentPrice">$0</div>
+                    <div class="stat-label">Bitcoin Price (USD)</div>
+                    <div class="stat-change positive" id="priceChange">+0.00%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="currentBlock">0</div>
+                    <div class="stat-label">Current Block</div>
+                    <div class="stat-change positive">Latest</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="networkHashrate">0 EH/s</div>
+                    <div class="stat-label">Network Hashrate</div>
+                    <div class="stat-change positive" id="hashrateChange">+0.00%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="difficulty">0</div>
+                    <div class="stat-label">Difficulty</div>
+                    <div class="stat-change" id="difficultyChange">+0.00%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="mempool">0</div>
+                    <div class="stat-label">Mempool (MB)</div>
+                    <div class="stat-change">Pending Txs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgFee">0</div>
+                    <div class="stat-label">Avg Fee (sat/vB)</div>
+                    <div class="stat-change">Network Fee</div>
+                </div>
+            </div>
 
-        <div id="error" class="error" style="display: none;">
-            <h3>Connection Error</h3>
-            <p>Unable to connect to Bitcoin node at http://100.93.229.100:3006/</p>
-            <p>Please check if your node is running and accessible.</p>
-        </div>
+            <div class="chart-container">
+                <div class="chart-title">Bitcoin Price (24h)</div>
+                <div class="chart-wrapper">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
 
-        <div id="blockContainer" style="display: none;">
-            <div class="block-container" id="blockData">
-                <!-- Block data will be inserted here -->
+            <div class="chart-container">
+                <div class="chart-title">Network Hash Rate (7 days)</div>
+                <div class="chart-wrapper">
+                    <canvas id="hashrateChart"></canvas>
+                </div>
             </div>
         </div>
 
-        <div style="text-align: center; margin-top: 30px;">
-            <button id="refreshBtn" class="refresh-btn">🔄 Refresh Now</button>
-            <div class="auto-refresh">
-                <input type="checkbox" id="autoRefresh" checked>
-                <label for="autoRefresh">Auto-refresh every 30 seconds</label>
+        <!-- Block Explorer Page -->
+        <div id="blocks" class="page">
+            <div class="header">
+                <h1>🔍 Block Explorer</h1>
+                <button class="refresh-btn" onclick="fetchLatestBlocks()">🔄 Refresh Blocks</button>
+            </div>
+
+            <div id="blockContainer">
+                <div class="loading" id="blockLoading">Loading latest blocks...</div>
             </div>
         </div>
 
-        <!-- Buy Me Coffee Button -->
-        <div class="coffee-button" onclick="copyBitcoinAddress()">
-            ☕ Buy me coffee
-            <div class="coffee-tooltip">
-                <div>Click to copy Bitcoin address:</div>
-                <div class="bitcoin-address">bc1qwxksr72wzy8m5pl5seavw6wkdna7c6gqtfe0a8dl5f3pv04dt08sathwy0</div>
+        <!-- Hash Rate Page -->
+        <div id="hashrate" class="page">
+            <div class="header">
+                <h1>⚡ Network Hash Rate Analysis</h1>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="currentHashrateDetail">0 EH/s</div>
+                    <div class="stat-label">Current Hash Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgHashrate">0 EH/s</div>
+                    <div class="stat-label">7-Day Average</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="hashrateTrend">0%</div>
+                    <div class="stat-label">Weekly Change</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Hash Rate Trend (30 days)</div>
+                <div class="chart-wrapper">
+                    <canvas id="hashrateHistoryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Difficulty Adjustment History</div>
+                <div class="chart-wrapper">
+                    <canvas id="difficultyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mining Pools Page -->
+        <div id="pools" class="page">
+            <div class="header">
+                <h1>🏊 Mining Pool Distribution</h1>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Pool Hash Rate Distribution</div>
+                <div class="chart-wrapper">
+                    <canvas id="poolChart"></canvas>
+                </div>
+            </div>
+
+            <table class="pool-table">
+                <thead>
+                    <tr>
+                        <th>Pool Name</th>
+                        <th>Hash Rate</th>
+                        <th>Blocks (24h)</th>
+                        <th>Market Share</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="poolTableBody">
+                    <tr><td colspan="5" class="loading">Loading pool data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mining Calculator Page -->
+        <div id="calculator" class="page">
+            <div class="header">
+                <h1>🧮 Mining Profitability Calculator</h1>
+            </div>
+
+            <div class="calculator-form">
+                <div class="form-group">
+                    <label for="hashRate">Hash Rate (TH/s)</label>
+                    <input type="number" id="hashRate" value="100" min="0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="powerConsumption">Power Consumption (Watts)</label>
+                    <input type="number" id="powerConsumption" value="3250" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="electricityCost">Electricity Cost (USD per kWh)</label>
+                    <input type="number" id="electricityCost" value="0.12" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="poolFee">Pool Fee (%)</label>
+                    <input type="number" id="poolFee" value="1" min="0" max="10" step="0.1">
+                </div>
+                <button class="refresh-btn" onclick="calculateProfitability()">Calculate Profitability</button>
+            </div>
+
+            <div class="result-panel" id="calculatorResults" style="display: none;">
+                <h3 style="color: #ff6b35; margin-bottom: 20px;">Mining Profitability Results</h3>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-label">Daily Revenue</div>
+                        <div class="info-value" id="dailyRevenue">$0.00</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Daily Electricity Cost</div>
+                        <div class="info-value" id="dailyElectricity">$0.00</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Daily Profit</div>
+                        <div class="info-value" id="dailyProfit">$0.00</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Monthly Profit</div>
+                        <div class="info-value" id="monthlyProfit">$0.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- News Page -->
+        <div id="news" class="page">
+            <div class="header">
+                <h1>📰 Bitcoin Mining News</h1>
+                <button class="refresh-btn" onclick="loadNews()">🔄 Refresh News</button>
+            </div>
+
+            <div id="newsContainer">
+                <div class="loading">Loading latest mining news...</div>
             </div>
         </div>
     </div>
 
+    <!-- Buy Me Coffee Button -->
+    <div class="coffee-button" onclick="copyBitcoinAddress()">
+        ☕ Buy me coffee
+    </div>
+
     <script>
         const API_URL = 'https://mempool.space/api';
+        let charts = {};
+        let currentPage = 'dashboard';
         let autoRefreshInterval;
-        
-        const elements = {
-            status: document.getElementById('status'),
-            loading: document.getElementById('loading'),
-            error: document.getElementById('error'),
-            blockContainer: document.getElementById('blockContainer'),
-            blockData: document.getElementById('blockData'),
-            refreshBtn: document.getElementById('refreshBtn'),
-            autoRefresh: document.getElementById('autoRefresh')
-        };
 
-        async function fetchBlockData() {
+        // Navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Remove active class from nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+            
+            currentPage = pageId;
+            
+            // Load page-specific data
+            switch(pageId) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'blocks':
+                    fetchLatestBlocks();
+                    break;
+                case 'hashrate':
+                    loadHashrateAnalysis();
+                    break;
+                case 'pools':
+                    loadPoolData();
+                    break;
+                case 'news':
+                    loadNews();
+                    break;
+            }
+        }
+
+        // Dashboard functions
+        async function loadDashboard() {
             try {
-                elements.loading.style.display = 'block';
-                elements.error.style.display = 'none';
-                elements.refreshBtn.disabled = true;
-
-                console.log('Fetching block height...');
+                // Fetch basic stats
+                await Promise.all([
+                    fetchCurrentBlock(),
+                    fetchNetworkStats(),
+                    fetchMempoolInfo()
+                ]);
                 
-                // Fetch the current block height using your specified endpoint
-                const heightResponse = await fetch(`${API_URL}/blocks/tip/height`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'text/plain, */*',
-                    },
-                    mode: 'cors'
-                });
-                
-                if (!heightResponse.ok) {
-                    throw new Error(`HTTP ${heightResponse.status}: Failed to fetch block height`);
-                }
-                const currentHeight = parseInt(await heightResponse.text());
-                console.log('Current height:', currentHeight);
-
-                // Fetch the latest block hash
-                const tipResponse = await fetch(`${API_URL}/blocks/tip/hash`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'text/plain, */*',
-                    },
-                    mode: 'cors'
-                });
-                
-                if (!tipResponse.ok) {
-                    throw new Error(`HTTP ${tipResponse.status}: Failed to fetch latest block hash`);
-                }
-                const latestBlockHash = await tipResponse.text();
-                console.log('Latest block hash:', latestBlockHash);
-
-                // Fetch detailed block data
-                const blockResponse = await fetch(`${API_URL}/block/${latestBlockHash}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                    },
-                    mode: 'cors'
-                });
-                
-                if (!blockResponse.ok) {
-                    throw new Error(`HTTP ${blockResponse.status}: Failed to fetch block data`);
-                }
-                const blockData = await blockResponse.json();
-
-                // Ensure height is set correctly
-                blockData.height = currentHeight;
-
-                displayBlockData(blockData, `${API_URL}/blocks/tip/height`);
-                updateStatus(true);
+                // Initialize charts
+                initializePriceChart();
+                initializeHashrateChart();
                 
             } catch (error) {
-                console.error('Detailed error:', error);
-                updateStatus(false);
-                
-                let errorMessage = 'Unknown error occurred';
-                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                    errorMessage = 'Network error - likely CORS restriction. Try running this page from a local server or use a CORS browser extension.';
-                } else if (error.message.includes('HTTP')) {
-                    errorMessage = error.message;
-                } else {
-                    errorMessage = error.message || error.toString();
-                }
-                
-                elements.error.innerHTML = `
-                    <h3>Connection Error</h3>
-                    <p><strong>Error:</strong> ${errorMessage}</p>
-                    <p><strong>Troubleshooting:</strong></p>
-                    <ul style="text-align: left; margin: 10px 0;">
-                        <li>If you see "Failed to fetch", this is likely a CORS issue</li>
-                        <li>Try opening this page in a new browser tab</li>
-                        <li>Use a CORS browser extension for development</li>
-                        <li>Check browser console (F12) for more details</li>
-                    </ul>
-                    <p><strong>Alternative:</strong> Visit <a href="https://mempool.space" target="_blank" style="color: #00ff41;">mempool.space</a> directly</p>
-                `;
-                elements.error.style.display = 'block';
-                elements.blockContainer.style.display = 'none';
-            } finally {
-                elements.loading.style.display = 'none';
-                elements.refreshBtn.disabled = false;
+                console.error('Error loading dashboard:', error);
             }
         }
 
-        function displayBlockData(data, endpoint) {
-            // Mempool.space API returns data in a specific format
-            const blockInfo = {
-                height: data.height,
-                hash: data.id,
-                time: data.timestamp,
-                previousblockhash: data.previousblockhash,
-                merkleroot: data.merkle_root,
-                difficulty: data.difficulty,
-                nTx: data.tx_count,
-                size: data.size,
-                weight: data.weight,
-                version: data.version,
-                bits: data.bits,
-                nonce: data.nonce
-            };
+        async function fetchCurrentBlock() {
+            try {
+                const response = await fetch(`${API_URL}/blocks/tip/height`);
+                const height = await response.text();
+                document.getElementById('currentBlock').textContent = parseInt(height).toLocaleString();
+            } catch (error) {
+                console.error('Error fetching current block:', error);
+            }
+        }
 
-            const html = `
-                <div class="block-header">
-                    <div class="block-height">Block #${blockInfo.height || 'Unknown'}</div>
-                    <div class="block-time">${formatTime(blockInfo.time || blockInfo.timestamp)}</div>
-                </div>
+        async function fetchNetworkStats() {
+            try {
+                // Simulate network stats (replace with real API calls)
+                document.getElementById('networkHashrate').textContent = '450 EH/s';
+                document.getElementById('hashrateChange').textContent = '+2.5%';
+                document.getElementById('difficulty').textContent = '62.46T';
+                document.getElementById('difficultyChange').textContent = '+1.2%';
+                document.getElementById('currentPrice').textContent = '$67,500';
+                document.getElementById('priceChange').textContent = '+3.2%';
+            } catch (error) {
+                console.error('Error fetching network stats:', error);
+            }
+        }
+
+        async function fetchMempoolInfo() {
+            try {
+                const response = await fetch(`${API_URL}/mempool`);
+                const mempoolData = await response.json();
+                document.getElementById('mempool').textContent = Math.round(mempoolData.vsize / 1000000) + ' MB';
                 
-                <div class="grid">
-                    <div class="info-card">
-                        <div class="info-label">Block Hash</div>
-                        <div class="info-value hash">${blockInfo.hash}</div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <div class="info-label">Previous Block</div>
-                        <div class="info-value hash">${blockInfo.previousblockhash}</div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <div class="info-label">Merkle Root</div>
-                        <div class="info-value hash">${blockInfo.merkleroot}</div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <div class="info-label">Difficulty</div>
-                        <div class="info-value">${formatNumber(blockInfo.difficulty)}</div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <div class="info-label">Transaction Count</div>
-                        <div class="info-value">${formatNumber(blockInfo.nTx)}</div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <div class="info-label">Block Size</div>
-                        <div class="info-value">${formatBytes(blockInfo.size)}</div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <div class="info-label">Weight</div>
-                        <div class="info-value">${formatNumber(blockInfo.weight)}</div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <div class="info-label">Version</div>
-                        <div class="info-value">${blockInfo.version}</div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <div class="info-label">Bits</div>
-                        <div class="info-value">${blockInfo.bits}</div>
-                    </div>
-                    
-                    <div class="info-card">
-                        <div class="info-label">Nonce</div>
-                        <div class="info-value">${formatNumber(blockInfo.nonce)}</div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; font-size: 0.9rem; opacity: 0.8;">
-                    <strong>Data source:</strong> Mempool.space API<br>
-                    <strong>Block URL:</strong> <a href="https://mempool.space/block/${blockInfo.hash}" target="_blank" style="color: #00ff41;">View on Mempool.space</a><br>
-                    <strong>Last updated:</strong> ${new Date().toLocaleString()}
-                </div>
-            `;
+                // Fetch fee estimates
+                const feeResponse = await fetch(`${API_URL}/v1/fees/recommended`);
+                const feeData = await feeResponse.json();
+                document.getElementById('avgFee').textContent = feeData.fastestFee;
+            } catch (error) {
+                console.error('Error fetching mempool info:', error);
+            }
+        }
+
+        // Chart initialization
+        function initializePriceChart() {
+            const ctx = document.getElementById('priceChart');
+            if (!ctx) return;
             
-            elements.blockData.innerHTML = html;
-            elements.blockContainer.style.display = 'block';
-        }
-
-        function updateStatus(connected) {
-            elements.status.className = `status ${connected ? 'connected' : 'disconnected'}`;
-            elements.status.textContent = connected ? '🟢 Connected' : '🔴 Disconnected';
-        }
-
-        function formatTime(timestamp) {
-            if (!timestamp) return 'Unknown';
-            const date = new Date(timestamp * 1000);
-            return date.toLocaleString();
-        }
-
-        function formatNumber(num) {
-            if (!num) return null;
-            return num.toLocaleString();
-        }
-
-        function formatBytes(bytes) {
-            if (!bytes) return null;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            if (bytes === 0) return '0 Bytes';
-            const i = Math.floor(Math.log(bytes) / Math.log(1024));
-            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-        }
-
-        function setupAutoRefresh() {
-            if (elements.autoRefresh.checked) {
-                autoRefreshInterval = setInterval(fetchBlockData, 30000);
-            } else {
-                clearInterval(autoRefreshInterval);
+            // Generate sample price data
+            const labels = [];
+            const data = [];
+            const now = new Date();
+            
+            for (let i = 23; i >= 0; i--) {
+                const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+                labels.push(time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+                data.push(67000 + Math.random() * 2000 - 1000);
             }
-        }
-
-        // Event listeners
-        elements.refreshBtn.addEventListener('click', fetchBlockData);
-        elements.autoRefresh.addEventListener('change', setupAutoRefresh);
-
-        // Copy Bitcoin address function
-        function copyBitcoinAddress() {
-            const address = 'bc1qwxksr72wzy8m5pl5seavw6wkdna7c6gqtfe0a8dl5f3pv04dt08sathwy0';
-            navigator.clipboard.writeText(address).then(() => {
-                // Show success feedback
-                const button = document.querySelector('.coffee-button');
-                const originalText = button.innerHTML;
-                button.innerHTML = '✅ Address Copied!';
-                button.style.background = 'linear-gradient(45deg, #00ff41, #00cc33)';
-                
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.style.background = 'linear-gradient(45deg, #ff6b35, #f7931e)';
-                }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy address:', err);
-                // Fallback: select the text
-                const tooltip = document.querySelector('.bitcoin-address');
-                const range = document.createRange();
-                range.selectNode(tooltip);
-                window.getSelection().removeAllRanges();
-                window.getSelection().addRange(range);
+            
+            charts.priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Bitcoin Price (USD)',
+                        data: data,
+                        borderColor: '#ff6b35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#00ff41' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        }
+                    }
+                }
             });
         }
 
-        // Initialize
-        fetchBlockData();
-        setupAutoRefresh();
-    </script>
-</body>
-</html>
+        function initializeHashrateChart() {
+            const ctx = document.getElementById('hashrateChart');
+            if (!ctx) return;
+            
+            // Generate sample hashrate data
+            const labels = [];
+            const data = [];
+            const now = new Date();
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                data.push(400 + Math.random() * 100);
+            }
+            
+            charts.hashrateChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Network Hashrate (EH/s)',
+                        data: data,
+                        backgroundColor: 'rgba(0, 255, 65, 0.6)',
+                        borderColor: '#00ff41',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#00ff41' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Block Explorer functions
+        async function fetchLatestBlocks() {
+            const container = document.getElementById('blockContainer');
+            const loading = document.getElementById('blockLoading');
+            
+            try {
+                loading.style.display = 'block';
+                
+                // Fetch latest blocks
+                const response = await fetch(`${API_URL}/blocks`);
+                const blocks = await response.json();
