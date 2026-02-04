@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Mining Dashboard Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+            color: #00ff41;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .nav-bar {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid #ff6b35;
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff6b35;
+            text-shadow: 0 0 10px #ff6b35;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-item {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 107, 53, 0.2);
+            color: #ff6b35;
+            transform: translateY(-2px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            color: #ff6b35;
+            text-shadow: 0 0 20px #ff6b35;
+            margin-bottom: 10px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #ff6b35; }
+            to { text-shadow: 0 0 30px #ff6b35, 0 0 40px #ff6b35; }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff6b35, #00ff41, #ff6b35);
+            border-radius: 20px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            opacity: 0.3;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 255, 65, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ff6b35;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-change {
+            font-size: 0.9rem;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+
+        .stat-change.positive {
+            color: #00ff41;
+        }
+
+        .stat-change.negative {
+            color: #ff4444;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            color: #ff6b35;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            border-color: #ff6b35;
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            word-break: break-all;
+            color: #00ff41;
+        }
+
+        .hash {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 65, 0.3);
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .status.connected {
+            background: rgba(0, 255, 65, 0.2);
+            border: 2px solid #00ff41;
+            color: #00ff41;
+        }
+
+        .status.disconnected {
+            background: rgba(255, 107, 53, 0.2);
+            border: 2px solid #ff6b35;
+            color: #ff6b35;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+            margin: 10px;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #ff6b35;
+            animation: pulse 1.5s ease-in-out infinite;
+            padding: 40px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pool-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .pool-table th,
+        .pool-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+        }
+
+        .pool-table th {
+            background: rgba(255, 107, 53, 0.2);
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        .pool-table tr:hover {
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        .calculator-form {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            border-radius: 8px;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+        }
+
+        .result-panel {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid #ff6b35;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .coffee-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+            z-index: 1000;
+        }
+
+        .news-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .news-item:hover {
+            border-color: #ff6b35;
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .news-title {
+            color: #ff6b35;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .news-content {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .news-meta {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+            .nav-menu {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav-bar">
+        <div class="nav-container">
+            <div class="nav-logo">⛏️ BTC Mining Pro</div>
+            <ul class="nav-menu">
+                <li class="nav-item active" onclick="showPage('dashboard')">Dashboard</li>
+                <li class="nav-item" onclick="showPage('blocks')">Block Explorer</li>
+                <li class="nav-item" onclick="showPage('hashrate')">Hash Rate</li>
+                <li class="nav-item" onclick="showPage('pools')">Mining Pools</li>
+                <li class="nav-item" onclick="showPage('calculator')">Calculator</li>
+                <li class="nav-item" onclick="showPage('news')">News</li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page active">
+            <div class="header">
+                <h1>⛏️ Bitcoin Mining Dashboard</h1>
+                <div id="status" class="status connected">🟢 Connected</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="currentPrice">$0</div>
+                    <div class="stat-label">Bitcoin Price (USD)</div>
+                    <div class="stat-change positive" id="priceChange">+0.00%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="currentBlock">0</div>
+                    <div class="stat-label">Current Block</div>
+                    <div class="stat-change positive">Latest</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="networkHashrate">0 EH/s</div>
+                    <div class="stat-label">Network Hashrate</div>
+                    <div class="stat-change positive" id="hashrateChange">+0.00%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="difficulty">0</div>
+                    <div class="stat-label">Difficulty</div>
+                    <div class="stat-change" id="difficultyChange">+0.00%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="mempool">0</div>
+                    <div class="stat-label">Mempool (MB)</div>
+                    <div class="stat-change">Pending Txs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgFee">0</div>
+                    <div class="stat-label">Avg Fee (sat/vB)</div>
+                    <div class="stat-change">Network Fee</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Bitcoin Price (24h)</div>
+                <div class="chart-wrapper">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Network Hash Rate (7 days)</div>
+                <div class="chart-wrapper">
+                    <canvas id="hashrateChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Block Explorer Page -->
+        <div id="blocks" class="page">
+            <div class="header">
+                <h1>🔍 Block Explorer</h1>
+                <button class="refresh-btn" onclick="fetchLatestBlocks()">🔄 Refresh Blocks</button>
+            </div>
+
+            <div id="blockContainer">
+                <div class="loading" id="blockLoading">Loading latest blocks...</div>
+            </div>
+        </div>
+
+        <!-- Hash Rate Page -->
+        <div id="hashrate" class="page">
+            <div class="header">
+                <h1>⚡ Network Hash Rate Analysis</h1>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="currentHashrateDetail">0 EH/s</div>
+                    <div class="stat-label">Current Hash Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgHashrate">0 EH/s</div>
+                    <div class="stat-label">7-Day Average</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="hashrateTrend">0%</div>
+                    <div class="stat-label">Weekly Change</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Hash Rate Trend (30 days)</div>
+                <div class="chart-wrapper">
+                    <canvas id="hashrateHistoryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Difficulty Adjustment History</div>
+                <div class="chart-wrapper">
+                    <canvas id="difficultyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mining Pools Page -->
+        <div id="pools" class="page">
+            <div class="header">
+                <h1>🏊 Mining Pool Distribution</h1>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Pool Hash Rate Distribution</div>
+                <div class="chart-wrapper">
+                    <canvas id="poolChart"></canvas>
+                </div>
+            </div>
+
+            <table class="pool-table">
+                <thead>
+                    <tr>
+                        <th>Pool Name</th>
+                        <th>Hash Rate</th>
+                        <th>Blocks (24h)</th>
+                        <th>Market Share</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="poolTableBody">
+                    <tr><td colspan="5" class="loading">Loading pool data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mining Calculator Page -->
+        <div id="calculator" class="page">
+            <div class="header">
+                <h1>🧮 Mining Profitability Calculator</h1>
+            </div>
+
+            <div class="calculator-form">
+                <div class="form-group">
+                    <label for="hashRate">Hash Rate (TH/s)</label>
+                    <input type="number" id="hashRate" value="100" min="0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="powerConsumption">Power Consumption (Watts)</label>
+                    <input type="number" id="powerConsumption" value="3250" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="electricityCost">Electricity Cost (USD per kWh)</label>
+                    <input type="number" id="electricityCost" value="0.12" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="poolFee">Pool Fee (%)</label>
+                    <input type="number" id="poolFee" value="1" min="0" max="10" step="0.1">
+                </div>
+                <button class="refresh-btn" onclick="calculateProfitability()">Calculate Profitability</button>
+            </div>
+
+            <div class="result-panel" id="calculatorResults" style="display: none;">
+                <h3 style="color: #ff6b35; margin-bottom: 20px;">Mining Profitability Results</h3>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-label">Daily Revenue</div>
+                        <div class="info-value" id="dailyRevenue">$0.00</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Daily Electricity Cost</div>
+                        <div class="info-value" id="dailyElectricity">$0.00</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Daily Profit</div>
+                        <div class="info-value" id="dailyProfit">$0.00</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Monthly Profit</div>
+                        <div class="info-value" id="monthlyProfit">$0.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- News Page -->
+        <div id="news" class="page">
+            <div class="header">
+                <h1>📰 Bitcoin Mining News</h1>
+                <button class="refresh-btn" onclick="loadNews()">🔄 Refresh News</button>
+            </div>
+
+            <div id="newsContainer">
+                <div class="loading">Loading latest mining news...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Buy Me Coffee Button -->
+    <div class="coffee-button" onclick="copyBitcoinAddress()">
+        ☕ Buy me coffee
+    </div>
+
+    <script>
+        const API_URL = 'https://mempool.space/api';
+        let charts = {};
+        let currentPage = 'dashboard';
+        let autoRefreshInterval;
+
+        // Navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Remove active class from nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+            
+            currentPage = pageId;
+            
+            // Load page-specific data
+            switch(pageId) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'blocks':
+                    fetchLatestBlocks();
+                    break;
+                case 'hashrate':
+                    loadHashrateAnalysis();
+                    break;
+                case 'pools':
+                    loadPoolData();
+                    break;
+                case 'news':
+                    loadNews();
+                    break;
+            }
+        }
+
+        // Dashboard functions
+        async function loadDashboard() {
+            try {
+                // Fetch basic stats
+                await Promise.all([
+                    fetchCurrentBlock(),
+                    fetchNetworkStats(),
+                    fetchMempoolInfo()
+                ]);
+                
+                // Initialize charts
+                initializePriceChart();
+                initializeHashrateChart();
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function fetchCurrentBlock() {
+            try {
+                const response = await fetch(`${API_URL}/blocks/tip/height`);
+                const height = await response.text();
+                document.getElementById('currentBlock').textContent = parseInt(height).toLocaleString();
+            } catch (error) {
+                console.error('Error fetching current block:', error);
+            }
+        }
+
+        async function fetchNetworkStats() {
+            try {
+                // Simulate network stats (replace with real API calls)
+                document.getElementById('networkHashrate').textContent = '450 EH/s';
+                document.getElementById('hashrateChange').textContent = '+2.5%';
+                document.getElementById('difficulty').textContent = '62.46T';
+                document.getElementById('difficultyChange').textContent = '+1.2%';
+                document.getElementById('currentPrice').textContent = '$67,500';
+                document.getElementById('priceChange').textContent = '+3.2%';
+            } catch (error) {
+                console.error('Error fetching network stats:', error);
+            }
+        }
+
+        async function fetchMempoolInfo() {
+            try {
+                const response = await fetch(`${API_URL}/mempool`);
+                const mempoolData = await response.json();
+                document.getElementById('mempool').textContent = Math.round(mempoolData.vsize / 1000000) + ' MB';
+                
+                // Fetch fee estimates
+                const feeResponse = await fetch(`${API_URL}/v1/fees/recommended`);
+                const feeData = await feeResponse.json();
+                document.getElementById('avgFee').textContent = feeData.fastestFee;
+            } catch (error) {
+                console.error('Error fetching mempool info:', error);
+            }
+        }
+
+        // Chart initialization
+        function initializePriceChart() {
+            const ctx = document.getElementById('priceChart');
+            if (!ctx) return;
+            
+            // Generate sample price data
+            const labels = [];
+            const data = [];
+            const now = new Date();
+            
+            for (let i = 23; i >= 0; i--) {
+                const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+                labels.push(time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+                data.push(67000 + Math.random() * 2000 - 1000);
+            }
+            
+            charts.priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Bitcoin Price (USD)',
+                        data: data,
+                        borderColor: '#ff6b35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#00ff41' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeHashrateChart() {
+            const ctx = document.getElementById('hashrateChart');
+            if (!ctx) return;
+            
+            // Generate sample hashrate data
+            const labels = [];
+            const data = [];
+            const now = new Date();
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                data.push(400 + Math.random() * 100);
+            }
+            
+            charts.hashrateChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Network Hashrate (EH/s)',
+                        data: data,
+                        backgroundColor: 'rgba(0, 255, 65, 0.6)',
+                        borderColor: '#00ff41',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#00ff41' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Block Explorer functions
+        async function fetchLatestBlocks() {
+            const container = document.getElementById('blockContainer');
+            const loading = document.getElementById('blockLoading');
+            
+            try {
+                loading.style.display = 'block';
+                
+                // Fetch latest blocks
+                const response = await fetch(`${API_URL}/blocks`);
+                const blocks = await response.json();
+                
+                displayBlocks(blocks.slice(0, 10)); // Show latest 10 blocks
+                
+            } catch (error) {
+                console.error('Error fetching blocks:', error);
+                container.innerHTML = '<div class="error">Failed to load blocks. Please try again.</div>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayBlocks(blocks) {
+            const container = document.getElementById('blockContainer');
+            
+            const blocksHTML = blocks.map(block => `
+                <div class="info-card" style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="font-size: 1.5rem; color: #ff6b35; font-weight: bold;">
+                            Block #${block.height.toLocaleString()}
+                        </div>
+                        <div style="color: #00ff41;">
+                            ${new Date(block.timestamp * 1000).toLocaleString()}
+                        </div>
+                    </div>
+                    <div class="info-grid">
+                        <div>
+                            <div class="info-label">Block Hash</div>
+                            <div class="info-value hash">${block.id}</div>
+                        </div>
+                        <div>
+                            <div class="info-label">Transactions</div>
+                            <div class="info-value">${block.tx_count.toLocaleString()}</div>
+                        </div>
+                        <div>
+                            <div class="info-label">Size</div>
+                            <div class="info-value">${formatBytes(block.size)}</div>
+                        </div>
+                        <div>
+                            <div class="info-label">Weight</div>
+                            <div class="info-value">${formatNumber(block.weight)}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <a href="https://mempool.space/block/${block.id}" target="_blank" 
+                           style="color: #00ff41; text-decoration: underline;">
+                            View on Mempool.space →
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = blocksHTML;
+        }
+
+        // Hash Rate Analysis functions
+        async function loadHashrateAnalysis() {
+            try {
+                // Update detailed hashrate stats
+                document.getElementById('currentHashrateDetail').textContent = '450 EH/s';
+                document.getElementById('avgHashrate').textContent = '445 EH/s';
+                document.getElementById('hashrateTrend').textContent = '+2.5%';
+                
+                // Initialize hashrate history chart
+                initializeHashrateHistoryChart();
+                initializeDifficultyChart();
+                
+            } catch (error) {
+                console.error('Error loading hashrate analysis:', error);
+            }
+        }
+
+        function initializeHashrateHistoryChart() {
+            const ctx = document.getElementById('hashrateHistoryChart');
+            if (!ctx) return;
+            
+            // Generate 30 days of hashrate data
+            const labels = [];
+            const data = [];
+            const now = new Date();
+            
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                data.push(420 + Math.random() * 60 + i * 0.5); // Trending up slightly
+            }
+            
+            charts.hashrateHistoryChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Network Hashrate (EH/s)',
+                        data: data,
+                        borderColor: '#00ff41',
+                        backgroundColor: 'rgba(0, 255, 65, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#00ff41' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeDifficultyChart() {
+            const ctx = document.getElementById('difficultyChart');
+            if (!ctx) return;
+            
+            // Generate difficulty adjustment data
+            const labels = [];
+            const data = [];
+            const changes = [];
+            
+            for (let i = 11; i >= 0; i--) {
+                labels.push(`Epoch ${12 - i}`);
+                const difficulty = 60 + Math.random() * 5 + i * 0.2;
+                data.push(difficulty);
+                changes.push(i > 10 ? 0 : (data[data.length - 1] - data[data.length - 2]) / data[data.length - 2] * 100);
+            }
+            
+            charts.difficultyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Difficulty (T)',
+                        data: data,
+                        borderColor: '#ff6b35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#00ff41' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#00ff41' },
+                            grid: { color: 'rgba(0, 255, 65, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Mining Pools functions
+        async function loadPoolData() {
+            try {
+                // Initialize pool distribution chart
+                initializePoolChart();
+                
+                // Load pool table data
+                loadPoolTable();
+                
+            } catch (error) {
+                console.error('Error loading pool data:', error);
+            }
+        }
+
+        function initializePoolChart() {
+            const ctx = document.getElementById('poolChart');
+            if (!ctx) return;
+            
+            const poolData = [
+                { name: 'Foundry USA', hashrate: 28.5 },
+                { name: 'AntPool', hashrate: 18.2 },
+                { name: 'F2Pool', hashrate: 14.8 },
+                { name: 'ViaBTC', hashrate: 9.1 },
+                { name: 'Binance Pool', hashrate: 8.3 },
+                { name: 'Poolin', hashrate: 6.7 },
+                { name: 'Others', hashrate: 14.4 }
+            ];
+            
+            charts.poolChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: poolData.map(p => p.name),
+                    datasets: [{
+                        data: poolData.map(p => p.hashrate),
+                        backgroundColor: [
+                            '#ff6b35', '#00ff41', '#f7931e', '#00ccff', 
+                            '#ff4444', '#44ff44', '#ffff44'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#000'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { 
+                                color: '#00ff41',
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadPoolTable() {
+            const tableBody = document.getElementById('poolTableBody');
+            
+            const poolData = [
+                { name: 'Foundry USA', hashrate: '128.25 EH/s', blocks: 42, share: '28.5%', status: 'Active' },
+                { name: 'AntPool', hashrate: '81.90 EH/s', blocks: 27, share: '18.2%', status: 'Active' },
+                { name: 'F2Pool', hashrate: '66.60 EH/s', blocks: 22, share: '14.8%', status: 'Active' },
+                { name: 'ViaBTC', hashrate: '40.95 EH/s', blocks: 13, share: '9.1%', status: 'Active' },
+                { name: 'Binance Pool', hashrate: '37.35 EH/s', blocks: 12, share: '8.3%', status: 'Active' },
+                { name: 'Poolin', hashrate: '30.15 EH/s', blocks: 10, share: '6.7%', status: 'Active' }
+            ];
+            
+            const tableHTML = poolData.map(pool => `
+                <tr>
+                    <td style="font-weight: bold; color: #ff6b35;">${pool.name}</td>
+                    <td>${pool.hashrate}</td>
+                    <td>${pool.blocks}</td>
+                    <td>${pool.share}</td>
+                    <td><span style="color: #00ff41;">●</span> ${pool.status}</td>
+                </tr>
+            `).join('');
+            
+            tableBody.innerHTML = tableHTML;
+        }
+
+        // Mining Calculator functions
+        function calculateProfitability() {
+            const hashRate = parseFloat(document.getElementById('hashRate').value) || 0;
+            const powerConsumption = parseFloat(document.getElementById('powerConsumption').value) || 0;
+            const electricityCost = parseFloat(document.getElementById('electricityCost').value) || 0;
+            const poolFee = parseFloat(document.getElementById('poolFee').value) || 0;
+            
+            // Bitcoin mining calculations (simplified)
+            const networkHashrate = 450 * 1000 * 1000; // 450 EH/s in TH/s
+            const blockReward = 3.125; // Current block reward
+            const bitcoinPrice = 67500; // Current BTC price
+            const blocksPerDay = 144; // Average blocks per day
+            
+            // Calculate daily BTC earned
+            const userHashrateShare = hashRate / networkHashrate;
+            const dailyBTC = userHashrateShare * blockReward * blocksPerDay;
+            const dailyBTCAfterFees = dailyBTC * (1 - poolFee / 100);
+            
+            // Calculate revenues and costs
+            const dailyRevenue = dailyBTCAfterFees * bitcoinPrice;
+            const dailyElectricityCost = (powerConsumption / 1000) * 24 * electricityCost;
+            const dailyProfit = dailyRevenue - dailyElectricityCost;
+            const monthlyProfit = dailyProfit * 30;
+            
+            // Display results
+            document.getElementById('dailyRevenue').textContent = `${dailyRevenue.toFixed(2)}`;
+            document.getElementById('dailyElectricity').textContent = `${dailyElectricityCost.toFixed(2)}`;
+            document.getElementById('dailyProfit').textContent = `${dailyProfit.toFixed(2)}`;
+            document.getElementById('dailyProfit').style.color = dailyProfit > 0 ? '#00ff41' : '#ff4444';
+            document.getElementById('monthlyProfit').textContent = `${monthlyProfit.toFixed(2)}`;
+            document.getElementById('monthlyProfit').style.color = monthlyProfit > 0 ? '#00ff41' : '#ff4444';
+            
+            document.getElementById('calculatorResults').style.display = 'block';
+        }
+
+        // News functions
+        function loadNews() {
+            const newsContainer = document.getElementById('newsContainer');
+            
+            // Sample news data (in a real app, fetch from news API)
+            const newsData = [
+                {
+                    title: "Bitcoin Mining Difficulty Increases by 3.2%",
+                    content: "The Bitcoin network difficulty has adjusted upward by 3.2% following the latest adjustment period, reflecting continued growth in network hashrate as more miners come online.",
+                    timestamp: "2 hours ago",
+                    source: "Bitcoin News"
+                },
+                {
+                    title: "Major Mining Pool Announces Green Energy Initiative",
+                    content: "Foundry USA, one of the largest Bitcoin mining pools, announced a new initiative to source 75% of its energy from renewable sources by the end of 2025.",
+                    timestamp: "6 hours ago",
+                    source: "Crypto Mining Today"
+                },
+                {
+                    title: "New ASIC Miners Hit Market with 150 TH/s Performance",
+                    content: "Leading ASIC manufacturer announces their latest generation miners capable of 150 TH/s with improved energy efficiency of 19 J/TH.",
+                    timestamp: "1 day ago",
+                    source: "Mining Hardware Weekly"
+                },
+                {
+                    title: "Bitcoin Hashrate Reaches New All-Time High",
+                    content: "The Bitcoin network hashrate has reached a new record high of 475 EH/s, demonstrating the continued security and decentralization of the network.",
+                    timestamp: "2 days ago",
+                    source: "Blockchain Analytics"
+                },
+                {
+                    title: "Mining Profitability Improves Following Price Rally",
+                    content: "Bitcoin's recent price surge to $67,500 has significantly improved mining profitability across all efficiency tiers, with older generation ASICs becoming profitable again.",
+                    timestamp: "3 days ago",
+                    source: "Mining Economics"
+                }
+            ];
+            
+            const newsHTML = newsData.map(article => `
+                <div class="news-item">
+                    <div class="news-title">${article.title}</div>
+                    <div class="news-content">${article.content}</div>
+                    <div class="news-meta">
+                        <strong>${article.source}</strong> • ${article.timestamp}
+                    </div>
+                </div>
+            `).join('');
+            
+            newsContainer.innerHTML = newsHTML;
+        }
+
+        // Utility functions
+        function formatNumber(num) {
+            if (!num) return '0';
+            return num.toLocaleString();
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return '0 Bytes';
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            if (bytes === 0) return '0 Bytes';
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function copyBitcoinAddress() {
+            const address = 'bc1qwxksr72wzy8m5pl5seavw6wkdna7c6gqtfe0a8dl5f3pv04dt08sathwy0';
+            navigator.clipboard.writeText(address).then(() => {
+                const button = document.querySelector('.coffee-button');
+                const originalText = button.textContent;
+                button.textContent = '✅ Address Copied!';
+                button.style.background = 'linear-gradient(45deg, #00ff41, #00cc33)';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'linear-gradient(45deg, #ff6b35, #f7931e)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy address:', err);
+            });
+        }
+
+        // Auto-refresh functionality
+        function setupAutoRefresh() {
+            autoRefreshInterval = setInterval(() => {
+                if (currentPage === 'dashboard') {
+                    loadDashboard();
+                } else if (currentPage === 'blocks') {
+                    fetchLatestBlocks();
+                }
+            }, 30000); // Refresh every 30 seconds
+        }
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboard();
+            setupAutoRefresh();
+        });
+
+        // Cleanup intervals when page is closed
+        window.addEventListener('beforeunload', function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>
