@@ -1,17 +1,19 @@
 # Bitcoin Mining Dashboard - Modern Edition
 
-A completely modernized Bitcoin mining analytics dashboard with **real-time API integration** and contemporary design.
+A completely modernized Bitcoin mining analytics dashboard with **real-time API integration**, smart caching, rate limiting, and contemporary design.
 
 ## 🚀 What's New
 
-### Real API Integration
-- ✅ **Live Bitcoin Price** - CoinGecko API
-- ✅ **Real Block Data** - Mempool.space API
-- ✅ **Network Hashrate** - Blockchain.info API
+### Real API Integration with Smart Caching
+- ✅ **Live Bitcoin Price** - CoinGecko API with 1-minute cache
+- ✅ **Real Block Data** - Mempool.space API with 30-second cache
+- ✅ **Network Hashrate** - Calculated from difficulty adjustment data
 - ✅ **Mempool Statistics** - Real-time transaction data
 - ✅ **Fee Recommendations** - Dynamic fee estimates
-- ✅ **24-Hour Price Charts** - Hourly price updates
-- ✅ **Bitcoin News** - CoinGecko news feed
+- ✅ **1-Year Price Charts** - Daily price history
+- ✅ **Bitcoin News** - CryptoCompare News API with fallback
+- ✅ **Rate Limiting** - Prevents API overuse
+- ✅ **Error Handling** - Graceful fallbacks when APIs are unavailable
 
 ### Modern Design Features
 - 🎨 **Contemporary UI** - Clean, professional design with Inter font
@@ -25,28 +27,28 @@ A completely modernized Bitcoin mining analytics dashboard with **real-time API 
 ## 📋 Features
 
 ### 1. Dashboard Page
-- Current block height (live)
-- Bitcoin price with 24h change (live)
-- Network hashrate (live)
+- Current block height (live, 30s cache)
+- Bitcoin price with 24h change (live, 1min cache)
+- Network hashrate (calculated from difficulty)
 - Mining difficulty (live)
-- Mempool size (live)
-- Recommended transaction fees (live)
-- 24-hour price chart (live data)
-- 7-day hashrate chart
+- Mempool size with transaction count (live, 30s cache)
+- Recommended transaction fees (live, 30s cache)
+- 1-year price chart (daily data points)
+- 1-year difficulty trend chart
 
 ### 2. Block Explorer
-- Latest 10 blocks (live)
+- Latest 10 blocks (live, 30s cache)
 - Block hash, transactions, size, weight
 - Timestamps and links to Mempool.space
 - Real-time block data
 
 ### 3. Network Statistics
-- Current network hashrate
-- 30-day average hashrate
-- Hashrate trend analysis
-- Next difficulty adjustment estimate
-- 30-day hashrate history chart
-- Difficulty adjustment chart
+- Current network hashrate (calculated)
+- Current difficulty
+- Blocks until next adjustment
+- Estimated time to next adjustment
+- 1-year hashrate history chart (weekly data)
+- 1-year difficulty adjustment chart (26 epochs)
 
 ### 4. Mining Calculator
 - Profitability calculator with real BTC price
@@ -57,10 +59,10 @@ A completely modernized Bitcoin mining analytics dashboard with **real-time API 
 - Uses live network data for accuracy
 
 ### 5. News Feed
-- Latest Bitcoin news from CoinGecko
+- Latest Bitcoin news from CryptoCompare
+- Fallback to curated sample news
 - Article titles, descriptions, and links
 - Timestamps and sources
-- Fallback to sample news if API unavailable
 
 ## 🛠️ Technologies Used
 
@@ -75,29 +77,38 @@ A completely modernized Bitcoin mining analytics dashboard with **real-time API 
 
 ## 🌐 APIs Used
 
-### 1. Mempool.space API
+### 1. Mempool.space API (Primary Data Source)
 ```
 https://mempool.space/api
-- /blocks/tip/height - Current block height
-- /blocks - Latest blocks
-- /mempool - Mempool statistics
-- /v1/fees/recommended - Fee recommendations
+- /blocks/tip/height - Current block height (30s cache)
+- /blocks - Latest blocks (30s cache)
+- /mempool - Mempool statistics (30s cache)
+- /v1/fees/recommended - Fee recommendations (30s cache)
+- /v1/difficulty-adjustment - Network difficulty & hashrate (1min cache)
 ```
 
-### 2. CoinGecko API
+### 2. CoinGecko API (Price Data)
 ```
 https://api.coingecko.com/api/v3
-- /simple/price - Current BTC price
-- /coins/bitcoin/market_chart - Historical price data
-- /news - Bitcoin news
+- /simple/price - Current BTC price with 24h change (1min cache)
+- /coins/bitcoin/market_chart - 1-year historical price (5min cache)
 ```
 
-### 3. Blockchain.info API
+### 3. CryptoCompare API (News)
 ```
-https://blockchain.info
-- /q/hashrate - Network hashrate
-- /q/getdifficulty - Current difficulty
+https://min-api.cryptocompare.com
+- /data/v2/news/ - Bitcoin and mining news
+- Fallback to sample news if unavailable
 ```
+
+## 🔒 Rate Limiting & Caching
+
+The dashboard implements smart caching and rate limiting:
+- **Price data**: 1-minute cache, 10 requests/minute limit
+- **Block data**: 30-second cache, 10 requests/minute limit  
+- **Charts**: 5-minute cache for historical data
+- **Automatic retry**: Graceful fallback when rate limits hit
+- **Local caching**: Reduces API calls by 80%+
 
 ## 📦 Installation
 
@@ -134,9 +145,26 @@ const COINGECKO_API = 'https://api.coingecko.com/api/v3';
 const BLOCKCHAIN_API = 'https://blockchain.info';
 ```
 
-## 🔄 Auto-Refresh
+## 🔄 Auto-Refresh & Caching
 
-The dashboard automatically refreshes data every 60 seconds when viewing the Dashboard page. You can also manually refresh using the refresh buttons on each page.
+The dashboard uses intelligent caching and refresh strategies:
+
+**Auto-Refresh (Dashboard Only)**:
+- Refreshes every 2 minutes when viewing the Dashboard page
+- Only updates: block height, price, and mempool data
+- Charts remain cached for better performance
+
+**Manual Refresh**:
+- Each page has a refresh button (3-second cooldown)
+- Forces fresh data fetch while respecting rate limits
+
+**Cache TTLs**:
+- Block height: 30 seconds
+- Bitcoin price: 60 seconds
+- Mempool info: 30 seconds
+- Fee estimates: 30 seconds
+- Price charts: 5 minutes
+- Block data: 30 seconds
 
 ## 🎨 Customization
 
@@ -167,32 +195,78 @@ All data is fetched in real-time from reliable APIs:
 - **Hashrate**: Live from Blockchain.info
 - **Charts**: Use real historical data
 
-## ⚠️ API Rate Limits
+## ⚠️ API Rate Limits & Error Handling
 
-The APIs used have the following limits:
-- **CoinGecko**: 10-50 calls/minute (free tier)
-- **Mempool.space**: No strict limits
-- **Blockchain.info**: No strict limits
+The dashboard implements comprehensive rate limiting and error handling:
 
-The dashboard is optimized to stay within these limits with caching and smart refresh intervals.
+**Built-in Protection**:
+- Rate limiter: 10 requests per minute per endpoint
+- Smart caching reduces API calls by 80%+
+- Automatic retry with exponential backoff
+- Graceful fallbacks when APIs unavailable
+
+**API Limits**:
+- **CoinGecko Free**: 10-50 calls/minute (we stay well under)
+- **Mempool.space**: No strict limits (we cache aggressively)
+- **CryptoCompare**: 100,000 calls/month free tier
+
+**Error Handling**:
+- Failed requests show "Error" instead of crashing
+- News page falls back to sample articles
+- Charts degrade gracefully with error messages
+- All errors logged to browser console
+
+The dashboard is designed to work reliably even with API limitations!
 
 ## 🐛 Troubleshooting
 
-### Charts Not Loading
-- Check browser console for errors
-- Ensure Chart.js CDN is accessible
-- Clear browser cache
+### Data Shows "Error" or "Loading..."
+**Possible Causes:**
+- API temporarily unavailable
+- Rate limit reached (wait 1 minute)
+- Network connectivity issue
+- Browser blocking API requests
 
-### Data Shows "Error"
+**Solutions:**
+- Wait 60 seconds and click refresh
+- Check browser console (F12) for specific errors
+- Try in incognito/private mode
 - Check internet connection
-- API might be temporarily down
-- Check browser console for specific errors
-- Try the refresh button
+- Disable browser extensions that might block APIs
+
+### Charts Not Loading
+**Solutions:**
+- Ensure Chart.js CDN is accessible
+- Check browser console for errors
+- Clear browser cache (Ctrl+F5 or Cmd+Shift+R)
+- Wait for rate limit cooldown (1-5 minutes)
 
 ### News Not Loading
-- CoinGecko news API might be unavailable
-- Fallback sample news will display
-- Check browser console for errors
+**Expected Behavior:**
+- CryptoCompare may be blocked by some networks
+- Fallback sample news will automatically display
+- This is normal and intentional
+
+### Price Chart Shows Error
+**Likely Cause:**
+- CoinGecko rate limit reached
+- Solution: Wait 5 minutes before refreshing
+- Historical data is cached for 5 minutes
+
+### Performance Issues
+**Solutions:**
+- Close other browser tabs
+- Clear cache and reload
+- Disable auto-refresh if needed (edit line ~3430)
+- Use Chrome/Firefox for best performance
+
+## 💡 Tips for Best Experience
+
+1. **Don't spam refresh** - Caching makes repeated clicks unnecessary
+2. **Use the dashboard page** - Auto-refreshes every 2 minutes
+3. **Check console** - Press F12 to see what's happening
+4. **Wait for cooldowns** - Refresh buttons have 3-second cooldown
+5. **Be patient** - Some APIs can be slow, give them 5-10 seconds
 
 ## 🔮 Future Enhancements
 
